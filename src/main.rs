@@ -13,9 +13,14 @@ mod visibility_system;
 pub use visibility_system::*;
 mod monster_ai_system;
 pub use monster_ai_system::*;
+mod map_indexing_system;
+pub use map_indexing_system::*;
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum RunState { Paused, Running }
+pub enum RunState {
+    Paused,
+    Running,
+}
 
 pub struct State {
     pub ecs: World,
@@ -24,11 +29,14 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut vis = VisibilitySystem{};
+        let mut vis = VisibilitySystem {};
         vis.run_now(&self.ecs);
 
-        let mut mob = MonsterAI{};
+        let mut mob = MonsterAI {};
         mob.run_now(&self.ecs);
+
+        let mut map_index = MapIndexingSystem {};
+        map_index.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -62,11 +70,12 @@ impl GameState for State {
 }
 
 fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
-        .with_title("Rogue Rs")
-        .build()?;
+    let context = BTermBuilder::simple80x50().with_title("Rogue Rs").build()?;
 
-    let mut gs: State = State { ecs: World::new(), runstate : RunState::Running };
+    let mut gs: State = State {
+        ecs: World::new(),
+        runstate: RunState::Running,
+    };
 
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
@@ -74,8 +83,9 @@ fn main() -> BError {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<BlocksTile>();
 
-    let map : Map = Map::new_map_rooms_and_corridors();
+    let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
     gs.ecs
@@ -90,33 +100,53 @@ fn main() -> BError {
             bg: RGB::named(BLACK),
         })
         .with(Player {})
-        .with(Viewshed { visible_tiles : Vec::new(), range : 8, dirty : true })
-        .with(Name { name: "Player".to_string() })
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
+        .with(Name {
+            name: "Player".to_string(),
+        })
         .build();
 
     let mut rng = RandomNumberGenerator::new();
 
     for (i, room) in map.rooms.iter().skip(1).enumerate() {
         let (x, y) = room.center();
-        let glyph : FontCharType;
-        let name : String;
+        let glyph: FontCharType;
+        let name: String;
         let roll = rng.roll_dice(1, 2);
 
         match roll {
-            1 => { glyph = to_cp437('g'); name = "Goblin".to_string() }
-            _ => { glyph = to_cp437('o'); name = "Orc".to_string() }
+            1 => {
+                glyph = to_cp437('g');
+                name = "Goblin".to_string()
+            }
+            _ => {
+                glyph = to_cp437('o');
+                name = "Orc".to_string()
+            }
         }
 
-        gs.ecs.create_entity()
-              .with(Position { x, y })
-              .with(Renderable {
-                  glyph,
-                  fg: RGB::named(RED),
-                  bg: RGB::named(BLACK)
-              })
-            .with(Viewshed { visible_tiles : Vec::new(), range: 8, dirty: true })
+        gs.ecs
+            .create_entity()
+            .with(Position { x, y })
+            .with(Renderable {
+                glyph,
+                fg: RGB::named(RED),
+                bg: RGB::named(BLACK),
+            })
+            .with(Viewshed {
+                visible_tiles: Vec::new(),
+                range: 8,
+                dirty: true,
+            })
             .with(Monster {})
-            .with(Name { name: format!("{} #{}", &name, i) })
+            .with(Name {
+                name: format!("{} #{}", &name, i),
+            })
+            .with(BlocksTile {})
             .build();
     }
 

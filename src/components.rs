@@ -17,9 +17,9 @@ pub struct Renderable {
 
 #[derive(Component)]
 pub struct Viewshed {
-    pub visible_tiles : Vec<Point>,
-    pub range : i32,
-    pub dirty : bool
+    pub visible_tiles: Vec<Point>,
+    pub range: i32,
+    pub dirty: bool,
 }
 
 #[derive(Component, Debug)]
@@ -30,5 +30,8 @@ pub struct Monster {}
 
 #[derive(Component, Debug)]
 pub struct Name {
-    pub name: String
+    pub name: String,
 }
+
+#[derive(Component, Debug)]
+pub struct BlocksTile {}
